@@ -1,0 +1,249 @@
+This Project showcase my starting point in SQL, I will be updating my progress from time to time.
+--- To create a Table
+create table employee(
+
+e_id int not null,
+e_name varchar(20),
+e_salary int,
+e_age int,
+e_gender varchar(20),
+e_dept varchar(20)
+primary key(e_id)
+);
+
+---inserting record into a table
+insert into employee values(
+1, 'Joy',97000,45,'Male','operations'
+);
+insert into employee values(
+2, 'Sam',80000,21,'Male','Support'
+);
+insert into employee values(
+3, 'Peace',126000,25,'Female','Analytics'
+);
+insert into employee values(
+4,'Jenet',73000,30,'Female','Analytics'
+);
+
+insert into employee values(
+5,'Joe',113000,27,'Male','Operations'
+);
+
+insert into employee values(
+6,'Khan',159000,33,'Male','Sales'
+);
+
+
+-- TO CHECK A COLUMN IN A TABLE
+select e_dept from employee
+
+--TO CHECK FOR MILTIPLE COLUMN 
+select e_name,e_gender,e_dept from employee 
+
+--TO CHECK FOR ALL COLUMN
+select * from employee
+
+--To check for distinct value from e_gender which is male and female
+select distinct e_gender from employee
+
+
+--where clause is used to extract records which satisfy a condition
+
+select * from employee where e_gender ='female'
+
+--employee whose age are less than 30
+select * from employee where e_age < 30
+
+--AND operator displays records if all conditions seperated by AND are TRUE.
+--To find employee whose gender is male than 21 and deept = analystics.
+select * from employee where e_gender = 'Female' and e_dept ='Analytics'
+
+--OR record displays records if atleast one condition is TRUE
+select * from employee where e_dept = 'Support' OR e_dept = 'Analytics'
+ 
+ --NOT operator displays records if the condition is not true
+ select * from employee where not e_gender = 'Female'
+
+ select * from employee where not e_dept = 'Sales'
+
+ --wildcard character is used to substitute one or more characters in a string.
+ --(%)	Represents zero or more characters.
+ --(-) Represents a single character.
+
+ select * from employee where e_name like 'j%';
+ select * from employee where e_age like '2_'
+
+-- HOW TO use BETWEEN FOR value range
+select * from employee where e_age between 21 AND 30;
+
+--Using Function in Sql
+select min(e_salary) from employee;
+select max(e_age) from employee;
+select Avg(e_salary) from employee;
+select sum(e_salary) from employee
+--Count function returns the num of row that match specific criteria
+select count(*) from employee where e_gender = 'Female'
+
+--removing blank space from a cell
+select '    keep pushing'
+select ltrim ('    keep pushing');
+
+---Change Character to lower or UPPER case
+select 'LOVE';
+select LOWER('LOVE');
+
+select'the power of mind'
+select UPPER('the power of mind');
+
+--using substrings to extract 'reading'
+select ' I explore the world by reading';
+select substring('I explore the world by reading',23,8)
+
+---using ORDER BY
+Select * from employee order by e_salary;
+Select * from employee order by e_salary desc;--descending order
+
+---Using TOP N
+Select Top 5 * from employee order by e_age desc;
+
+---Using GROUP BY
+select avg(e_salary) as Average_salary,e_gender from employee group by e_gender;
+
+select avg(e_age) as Average_age,e_dept from employee group by e_dept order by avg(e_age) desc ;
+
+---using HAVING 
+
+Select e_dept,avg(e_salary) as Average_age from employee group by e_dept
+having avg(e_salary)> 50000;
+
+
+--Updating value in a table
+update employee set e_name ='James' where e_age = 45
+
+-- deleting from the table
+Delete from employee where e_age = 21
+
+--- Creating the second table to create join
+create table dept(
+
+d_id int not null,
+d_name varchar(20),
+d_location varchar(20),
+
+primary key(d_id)
+);
+
+insert into dept values(
+
+1, 'Content','New York'
+);
+insert into dept values(
+2, 'Support','Canada'
+);
+insert into dept values(
+3, 'Analytics','New York'
+);
+insert into dept values(
+4,'Sales','Boston'
+);
+
+insert into dept values(
+5,'Tech','Dalas'
+);
+
+insert into dept values(
+6,'Finance','Canada' 
+);
+
+--To view second table
+select * from dept
+--- the first table
+select * from employee 
+---Inner join
+select employee.e_name, employee.e_dept, dept.d_name,dept.d_location from employee 
+INNER JOIN dept ON employee.e_dept = dept.d_name;
+
+----- left join
+select employee.e_name,employee.e_dept,dept.d_name,dept.d_location from employee
+LEFT JOIN dept
+ON employee.e_dept=dept.d_name;
+
+----- Right join
+select employee.e_name,employee.e_dept,dept.d_name,dept.d_location from employee
+RIGHT JOIN dept
+ON employee.e_dept=dept.d_name
+
+---FULL Join
+select employee.e_name,employee.e_dept,dept.d_name,dept.d_location from employee
+FULL JOIN dept
+ON employee.e_dept=dept.d_name;
+
+
+--- Updating using JOIN
+Update employee set e_age=e_age+ 1
+from employee
+join dept ON employee.e_dept = dept.d_name
+where d_location ='canada'
+
+
+---View is a virtual table based on the result of an sql statement
+create view female_employees AS
+select * from employee 
+where e_gender ='Female'
+
+--To view
+select * from female_employees
+
+--- to Drop the VIEW
+drop VIEW female_employees
+
+
+---CASE STATEMENT
+select * ,Grade =
+case
+when e_salary<97000 then 'Low Benefit'
+when e_salary<113000 then 'Average Benefit'
+else 'High Benefit'
+end
+from employee
+go
+
+---IIF STATEMENT
+select e_name,e_salary,e_age, IIF (e_age<25, 'Young Employee','Old Employee') as Employee_Category
+from employee
+
+---Stored procedure in SQL(Is a prepared SQL CODE which can be saved and be reused)
+
+create procedure employee_gender @gender varchar(20)
+as
+select * from employee
+where e_gender=@gender
+go
+
+exec employee_gender @gender='Female'
+exec employee_gender @gender='male'
+
+
+-------Transaction in SQL(Transaction is a group of commands that change data stored in a database)
+
+begin try
+begin transaction 
+  update employee set
+  e_salary=114000  where e_name='Joe'
+  update employee set
+  e_salary= 83000  where e_name ='Jenet'
+     commit transaction
+	 print 'transaction committed'
+end try
+
+
+begin catch
+  rollback transaction 
+  print 'transaction rolledback'
+  end catch
+ 
+ 
+ 
+
+
+
