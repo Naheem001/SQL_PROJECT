@@ -1,0 +1,272 @@
+Case Study #1 - Danny's Diner
+Introduction
+Danny seriously loves Japanese food so in the beginning of 2021, 
+he decides to embark upon a risky venture and opens up a cute little restaurant that sells his 3 favourite foods: sushi, curry and ramen.
+
+Danny’s Diner is in need of your assistance to help the restaurant stay afloat - 
+the restaurant has captured some very basic data from their few months of operation but have no idea how to use their data to help them run the business.
+
+Problem Statement-
+HERE IS THE LINK OF Problem_Statement 
+https://8weeksqlchallenge.com/case-study-1/
+
+
+
+CREATE SCHEMA dannys_diner;
+
+
+CREATE TABLE sales (
+  "customer_id" VARCHAR(1),
+  "order_date" DATE,
+  "product_id" INTEGER
+);
+
+INSERT INTO sales
+  ("customer_id", "order_date", "product_id")
+VALUES
+  ('A', '2021-01-01', '1'),
+  ('A', '2021-01-01', '2'),
+  ('A', '2021-01-07', '2'),
+  ('A', '2021-01-10', '3'),
+  ('A', '2021-01-11', '3'),
+  ('A', '2021-01-11', '3'),
+  ('B', '2021-01-01', '2'),
+  ('B', '2021-01-02', '2'),
+  ('B', '2021-01-04', '1'),
+  ('B', '2021-01-11', '1'),
+  ('B', '2021-01-16', '3'),
+  ('B', '2021-02-01', '3'),
+  ('C', '2021-01-01', '3'),
+  ('C', '2021-01-01', '3'),
+  ('C', '2021-01-07', '3');
+ 
+
+CREATE TABLE menu (
+  "product_id" INTEGER,
+  "product_name" VARCHAR(5),
+  "price" INTEGER
+);
+
+INSERT INTO menu
+  ("product_id", "product_name", "price")
+VALUES
+  ('1', 'sushi', '10'),
+  ('2', 'curry', '15'),
+  ('3', 'ramen', '12');
+  
+
+CREATE TABLE members (
+  "customer_id" VARCHAR(1),
+  "join_date" DATE
+);
+
+INSERT INTO members
+  ("customer_id", "join_date")
+VALUES
+  ('A', '2021-01-07'),
+  ('B', '2021-01-09');
+
+
+
+--1. What is the total amount each customer spent at the restaurant?
+Select Customer_id,
+sum(price) as total_spend
+from sales as S 
+Inner join menu as M on S.product_id = M.product_id 
+Group BY customer_id 
+
+--2. how many days has each customer visited the restaurant?
+
+Select customer_id,
+COUNT(Distinct order_date) as days 
+From sales
+group by customer_id
+
+---3. What was the first items from the menu purchased by each customer?
+
+WITH CTE AS (
+Select 
+Customer_id,
+order_date,
+product_name,
+----Rank() Over(Partition By customer_id Order by order_date ASC) as rnk 
+Row_number() over(PARTITION BY customer_id order by order_date Asc) rn 
+FROM SALES as S 
+Inner Join menu as M on S.product_id = M.product_id 
+)
+select
+customer_id,product_name from CTE 
+where rn = 1
+
+--4. What is the most purchased item on the menu and how many times was it purchased by all customers
+
+Select TOP 1
+Product_name,
+Count(order_date) as orders
+From SALES as S 
+INNER JOIN menu as M on S.product_id = M.product_id 
+Group BY product_name 
+Order by Count (order_date) DESC 
+
+--5. Which item was the most popular for each customer? 
+With CTE AS(
+Select
+product_name,
+customer_id,
+Count(order_date) as orders, 
+Rank() Over(Partition By customer_id Order by Count(order_date) DESC) as rnk 
+--Row_number() over(PARTITION BY customer_id order by Count(order_date) DESC) rn 
+From SALES as S 
+INNER JOIN menu as M on S.product_id = M.product_id 
+Group BY product_name,customer_id 
+ )
+
+ select Customer_id, Product_name 
+ from CTE 
+ Where rnk =1
+
+---6. which items was purchased just after the customer became a member?  
+WITH CTE AS(
+Select S.customer_id,
+order_date,
+join_date,
+product_name,
+RANK() over(PARTITION BY S.customer_id ORDER BY order_date) as rnk 
+--Row_number() over(PARTITION BY customer_id order by Order_date) rn 
+
+from sales as S 
+INNER JOIN members as MEM on MEM.customer_id =S.customer_id
+INNER JOIN menu as M on S.product_id = M.product_id 
+Where order_date >= join_date 
+) 
+Select
+customer_id, 
+product_name
+From CTE 
+where rnk = 1
+--7.  which items was purchased just before the customer became a member?  
+
+WITH CTE AS(
+Select S.customer_id,
+order_date,
+join_date,
+product_name,
+RANK() over(PARTITION BY S.customer_id ORDER BY order_date) as rnk 
+--Row_number() over(PARTITION BY customer_id order by Order_date) rn 
+
+from sales as S 
+INNER JOIN members as MEM on MEM.customer_id =S.customer_id
+INNER JOIN menu as M on S.product_id = M.product_id 
+Where order_date < join_date 
+) 
+Select
+customer_id, 
+product_name
+From CTE 
+where rnk = 1
+
+
+--8. What is the total items and amount spent for each member before they become a member? 
+ 
+SELECT 
+  S.customer_id, 
+  COUNT(M.product_id) as total_items, 
+  SUM(M.price) as amount_spent 
+FROM 
+  SALES as S
+  INNER JOIN MENU as M on S.product_id = M.product_id
+  INNER JOIN MEMBERS as MEM ON MEM.customer_id = S.customer_id 
+WHERE 
+  order_date < join_date 
+GROUP BY 
+  S.customer_id;
+
+--9. If each $1 spent equates to 10 points and sushi has a 2x ponits multiplier,
+how many points would each customer have?
+Select
+Customer_id,  
+Sum(CASE 
+when product_name = 'sushi' Then price *10*2 
+ELSE price * 10 
+END) as points 
+FROM MENU As M 
+Inner join sales As S ON S.PRODUCT_ID = M.PRODUCT_ID
+Group BY Customer_id 
+
+---10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi 
+- how many points do customer A and B have at the end of January?
+
+
+WITH Dates AS 
+(
+   SELECT *, 
+      DATEADD(DAY, 6, join_date) AS valid_date, 
+      EOMONTH('2021-01-31') AS last_date
+   FROM members 
+)
+Select S.Customer_id, 
+       SUM(
+	   Case 
+	  When m.product_ID = 1 THEN m.price*10*2
+	  When S.order_date between D.join_date and D.valid_date Then m.price*10*2
+	  Else m.price*10
+	  END 
+	  ) as Points
+From Dates D
+join Sales S
+On D.customer_id = S.customer_id
+Join Menu M
+On M.product_id = S.product_id
+Where S.order_date < d.last_date
+Group by S.customer_id
+
+BONUS PART 1 -
+The following questions are related creating basic data tables that Danny and 
+his team can use to quickly derive insights without needing to join the underlying tables using SQL.
+
+Select
+s.customer_id,
+order_date,
+product_name 
+price, 
+CASE 
+WHEN join_date IS NULL THEN 'N' 
+WHEN  order_date < join_date Then 'N' 
+Else 'Y' 
+END as member 
+from SALES AS S  
+INNER JOIN MENU AS M ON M.PRODUCT_ID = S.PRODUCT_ID
+LEFT JOIN members AS MEM ON MEM.customer_id=S.customer_id
+ORDER BY S.customer_id,order_date,price DESC 
+
+---BONUS 2
+Danny also requires further information about the ranking of customer products, but he purposely 
+does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
+
+WITH CTE AS (
+select 
+S.Customer_id,
+order_date,product_name 
+price, 
+CASE 
+WHEN join_date IS NULL THEN 'N' 
+WHEN  order_date < join_date Then 'N' 
+Else 'Y' 
+END as member 
+from SALES AS S  
+INNER JOIN MENU AS M ON M.PRODUCT_ID = S.PRODUCT_ID
+LEFT JOIN members AS MEM ON MEM.customer_id=S.customer_id
+--ORDER BY S.customer_id,Order_date,price DESC 
+)
+Select 
+*, 
+CASE 
+when member = 'N' THEN NULL 
+
+ELSE RANK() OVER(PARTITION BY customer_id,member ORDER BY order_date) 
+END as rnk
+
+from CTE
+
+
+                                        
